@@ -7,7 +7,8 @@ app = Flask(__name__)
 
 @app.route('/', methods=['GET'])
 def hello_devops():
-    return "Hello, DevOps!"
+    # התיקון כאן: שימוש בפונקציה socket.gethostname()
+    return f"Hello, DevOps! (Served by: {socket.gethostname()})"
 
 
 @app.route('/echo', methods=['POST'])
