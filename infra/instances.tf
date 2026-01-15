@@ -80,3 +80,27 @@ resource "aws_instance" "app_server" {
     Name = "App-Server"
   }
 }
+
+# --- שרת שני (Green) ---
+resource "aws_instance" "app_server_2" {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = "t3.micro"
+  subnet_id              = aws_subnet.public_subnet.id # אפשר לשים ב-Subnet אחרת אם יצרת כזו, ליתירות
+  vpc_security_group_ids = [aws_security_group.app_sg.id]
+  key_name               = "myfirstkey" 
+  iam_instance_profile   = aws_iam_instance_profile.jenkins_profile.name
+
+  # זהה לשרת הראשון - מריץ דוקר
+  user_data = <<-EOF
+              #!/bin/bash
+              sudo apt-get update -y
+              sudo apt-get install -y docker.io awscli
+              sudo usermod -aG docker ubuntu
+              sudo systemctl enable docker
+              sudo systemctl start docker
+              EOF
+
+  tags = {
+    Name = "App-Server-Green" # שים לב לשם השונה
+  }
+}

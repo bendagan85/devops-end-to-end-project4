@@ -15,3 +15,13 @@ output "s3_artifacts_bucket" {
   description = "The name of the S3 bucket for artifacts"
   value       = aws_s3_bucket.artifacts.id
 }
+
+output "alb_dns_name" {
+  value       = aws_lb.app_alb.dns_name
+  description = "The DNS name of the ALB"
+}
+
+output "app_server_2_public_ip" {
+  description = "Public IP of the second App Server (Green)"
+  value       = aws_instance.app_server_2.public_ip
+}

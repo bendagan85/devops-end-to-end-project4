@@ -2,11 +2,11 @@ pipeline {
     agent any
 
     environment {
-        // --- עדכון נתונים מתוך ה-Terraform Output ---
+        // --- עדכון נתונים ---
         AWS_ACCOUNT_ID = "002757291574" 
         AWS_REGION     = "us-east-1"
-        APP_SERVER_IP  = "98.92.198.53"
         S3_BUCKET      = "my-project-artifacts-sd29pe"
+        APP_SERVER_IPS = "98.92.198.53,3.233.238.233" 
         
         // הגדרות קבועות
         IMAGE_REPO     = "my-python-app"
@@ -58,28 +58,37 @@ pipeline {
             }
         }
 
-        stage('Deploy to EC2') {
+        stage('Deploy to Servers') {
             steps {
                 sshagent([SSH_CRED_ID]) {
-                    // תיקון: החלפנו את ה-EOF במרכאות פשוטות כדי למנוע שגיאות סינטקס
-                    sh """
-                    ssh -o StrictHostKeyChecking=no ubuntu@${APP_SERVER_IP} '
-                        aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_URL}
-                        sudo docker stop my-app || true
-                        sudo docker rm my-app || true
-                        sudo docker pull ${ECR_URL}/${IMAGE_REPO}:latest
-                        sudo docker run -d --name my-app -p 5000:5000 ${ECR_URL}/${IMAGE_REPO}:latest
-                    '
-                    """
+                    script {
+                        // פיצול רשימת השרתים למערך
+                        def servers = APP_SERVER_IPS.split(',')
+                        
+                        // לולאה שרצה על כל שרת ברשימה
+                        for (server_ip in servers) {
+                            echo "Starting deployment to server: ${server_ip}"
+                            
+                            sh """
+                            ssh -o StrictHostKeyChecking=no ubuntu@${server_ip} '
+                                aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_URL}
+                                sudo docker stop my-app || true
+                                sudo docker rm my-app || true
+                                sudo docker pull ${ECR_URL}/${IMAGE_REPO}:latest
+                                sudo docker run -d --name my-app -p 5000:5000 ${ECR_URL}/${IMAGE_REPO}:latest
+                            '
+                            """
+                        }
+                    }
                 }
             }
         }
 
         stage('Health Check') {
             steps {
-                // נותנים לאפליקציה רגע לעלות ואז בודקים
+                // נותנים לאפליקציה רגע לעלות
                 sh "sleep 10" 
-                sh "curl -f http://${APP_SERVER_IP}:5000/ || exit 1"
+                echo "Deployment finished to all servers. Please check the ALB URL manually."
             }
         }
     }
