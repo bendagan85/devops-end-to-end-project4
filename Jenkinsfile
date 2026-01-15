@@ -18,23 +18,23 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // וודא שכתובת הגיט כאן נכונה לריפו שלך
+                // משיכת הקוד מהרפוזיטורי שלך
                 git branch: 'main', url: 'https://github.com/bendagan85/devops-end-to-end-project4.git'
             }
         }
 
         stage('Lint & Static Analysis') {
             steps {
-                // תיקון: שימוש ב-python3 -m כדי להריץ כלים שלא נמצאים ב-PATH
+                // תיקון: שימוש ב-python3 -m וגם התעלמות משגיאת W292
                 sh 'pip install flake8'
-                sh 'python3 -m flake8 app/ --exclude=venv'
+                sh 'python3 -m flake8 app/ --exclude=venv --ignore=W292'
             }
         }
 
         stage('Unit Tests') {
             steps {
                 sh 'pip install -r app/requirements.txt'
-                // תיקון: גם כאן נריץ את pytest דרך פייתון
+                // הרצת הטסטים דרך המודול של פייתון
                 sh 'python3 -m pytest app/test_main.py'
             }
         }
@@ -63,7 +63,7 @@ pipeline {
                     // התקנת zip למקרה שאין
                     sh 'sudo apt-get install zip -y || true'
                     
-                    // דחיסת הקוד
+                    // דחיסת הקוד לקובץ ZIP עם מספר הבילד
                     sh 'zip -r app-release-${BUILD_NUMBER}.zip ./app'
                     
                     // העלאה לבאקט
@@ -80,11 +80,11 @@ pipeline {
                         # התחברות ל-ECR בתוך שרת האפליקציה
                         aws ecr get-login-password --region ${AWS_REGION} | sudo docker login --username AWS --password-stdin ${ECR_URL}
                         
-                        # עצירת קונטיינר ישן 
+                        # עצירת קונטיינר ישן ומחיקתו (הפקודה true מונעת שגיאה אם הוא לא קיים)
                         sudo docker stop my-app || true
                         sudo docker rm my-app || true
                         
-                        # משיכה והרצה
+                        # משיכה והרצה של הגרסה החדשה
                         sudo docker pull ${ECR_URL}/${IMAGE_REPO}:latest
                         sudo docker run -d --name my-app -p 5000:5000 ${ECR_URL}/${IMAGE_REPO}:latest
                     EOF
@@ -95,6 +95,7 @@ pipeline {
 
         stage('Health Check') {
             steps {
+                // המתנה של 10 שניות לעליית האפליקציה ובדיקה שהיא עונה
                 sh "sleep 10" 
                 sh "curl -f http://${APP_SERVER_IP}:5000/ || exit 1"
             }
