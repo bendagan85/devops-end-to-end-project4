@@ -19,21 +19,23 @@ pipeline {
         stage('Checkout') {
             steps {
                 // וודא שכתובת הגיט כאן נכונה לריפו שלך
-                git branch: 'main', url: 'https://github.com/bendagan85/devops-end-to-end-project4'
+                git branch: 'main', url: 'https://github.com/bendagan85/devops-end-to-end-project4.git'
             }
         }
 
         stage('Lint & Static Analysis') {
             steps {
+                // תיקון: שימוש ב-python3 -m כדי להריץ כלים שלא נמצאים ב-PATH
                 sh 'pip install flake8'
-                sh 'flake8 app/ --exclude=venv'
+                sh 'python3 -m flake8 app/ --exclude=venv'
             }
         }
 
         stage('Unit Tests') {
             steps {
                 sh 'pip install -r app/requirements.txt'
-                sh 'pytest app/test_main.py'
+                // תיקון: גם כאן נריץ את pytest דרך פייתון
+                sh 'python3 -m pytest app/test_main.py'
             }
         }
 
@@ -55,7 +57,6 @@ pipeline {
             }
         }
 
-        // --- הוספתי את השלב הזה כדי שה-ZIP יעלה ל-S3 ---
         stage('Upload Artifacts to S3') {
             steps {
                 script {
